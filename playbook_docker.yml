@@ -1,0 +1,78 @@
+---
+- name: InstallDocker
+  hosts: all
+  become: yes
+
+  tasks:
+
+  - name: Updating cache
+    apt:
+      update_cache: yes
+
+  - name: installing java
+    apt:
+      name: openjdk-8-jdk
+
+
+  - name: Installing aditional software
+    apt:
+      name: "{{ packages }}"
+    vars:
+      packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+
+  - name: Add docker repo-key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Add Docker repo
+    apt_repository:
+      repo: "deb https://download.docker.com/linux/ubuntu focal stable"
+      state: present
+      update_cache: yes
+
+  - name: Installing docker
+    apt:
+      name: docker-ce
+
+  - name: Docker-compose
+    get_url:
+      url: https://github.com/docker/compose/releases/download/1.28.3/docker-compose-Linux-x86_64
+      dest: /usr/local/bin/docker-compose
+
+  - name: Making Docker-compose executable
+    file:
+      path: /usr/local/bin/docker-compose
+      mode: '0744'
+
+  - name: Creating first container folder
+    file:
+      path: /home/ubuntu/wordpress
+      state: directory
+
+  - name: Copy env file
+    copy:
+      src: /home/vlados/EPAM/Final/Terraform/env
+      dest: /home/ubuntu/wordpress/.env
+
+  - name: Copy docker-compose file
+    copy:
+      src: /home/vlados/EPAM/Final/Terraform/docker-compose.yml
+      dest: /home/ubuntu/wordpress
+
+  - name: Copy SSH Key for Jenkins Agent
+    copy:
+      src: /home/vlados/EPAM/Final/Terraform/inst.pub
+      dest: /home/ubuntu/.ssh/
+
+  - name: Add key to authorized_keys
+    shell: cat /home/ubuntu/.ssh/inst.pub >> /home/ubuntu/.ssh/authorized_keys
+
+  - name: Starting WordPress
+    shell: docker-compose up -d
+    args:
+      chdir: /home/ubuntu/wordpress/

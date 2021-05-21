@@ -1,0 +1,54 @@
+- name: InstallJenkins_git
+  hosts: all
+  become: yes
+
+  tasks:
+
+  - name: installing java
+    apt:
+      name: openjdk-8-jdk
+      update_cache: yes
+
+  - name: Add jenkins repo-key
+    apt_key:
+      url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
+      state: present
+
+  - name: Adding repository list
+    shell: sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+
+  - name: Updating cache
+    apt:
+      update_cache: yes
+
+  - name: Installing Jenkins
+    apt:
+      name: jenkins
+
+  - name: Installing AWS CLI
+    apt:
+      name: awscli
+
+  - name: Copying Jenkins config from S3
+    shell: aws s3 cp s3://projectjenkinsdkatpfa/jenkins.tar /home/ubuntu/jenkins.tar
+
+  - name: Copy ssh key
+    copy:
+      src: /home/vlados/EPAM/Final/Terraform/inst
+      dest: /home/ubuntu/.ssh
+
+  - name: Removing default Jenkins dir
+    file:
+      path: /var/lib/jenkins
+      state: absent
+
+  - name: Restoring Jenkins config
+    unarchive:
+      src: /home/ubuntu/jenkins.tar
+      dest: /var/lib/
+      remote_src: yes
+
+  - name: Restarting Jenkins
+    systemd:
+      state: restarted
+      name: jenkins
